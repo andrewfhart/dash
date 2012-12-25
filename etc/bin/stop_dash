@@ -1,0 +1,25 @@
+#!/bin/bash
+#
+# Shut down DASH infrastructure
+#
+##
+# Understand from where we are being run
+ORIG_DIR=`pwd`
+DIR=`dirname $0`
+cd $DIR
+DIR_PATH=`pwd`
+
+echo "Stopping Dash services..."
+
+# Stop Node processes (Cube collector and emitter)
+kill -2 `pidof node`
+
+# Stop MongoDB
+kill -2 `pidof mongod`
+
+
+# And we're done...
+sleep 8
+echo "Done."
+exit
+

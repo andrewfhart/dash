@@ -1,0 +1,31 @@
+#!/bin/bash
+#
+# Start up DASH infrastructure
+#
+##
+# Understand from where we are being run
+ORIG_DIR=`pwd`
+DIR=`dirname $0`
+cd $DIR
+DIR_PATH=`pwd`
+
+# Start MongoDB
+$DIR_PATH/../dist/mongodb/bin/mongod --port 27018 --dbpath=$DIR_PATH/../data/mongo/db &
+
+# Let Mongo get settled...
+sleep 3
+
+# Start the Cube Collector Server
+pushd $DIR_PATH/../dist/cube
+$DIR_PATH/../dist/node/bin/node bin/collector.js 2>&1 >> \
+  $DIR_PATH/../logs/cube/collector.log &
+
+# Start the Cube Evaluator Server
+$DIR_PATH/../dist/node/bin/node bin/evaluator.js 2>&1 >> \
+  $DIR_PATH/../logs/cube/evaluator.log &
+
+# And we're done...
+sleep 3
+echo "Done."
+exit
+

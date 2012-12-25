@@ -1,0 +1,107 @@
+#!/bin/bash
+#
+# Dash install script
+#
+# Create a fresh Dash installation at the specified location.
+#
+# Usage: 
+# $ ./install_dash /installation/path
+#
+# @author  Andrew Hart <andrew@datafluency.com>
+# @license Apache Software Licence, V 2.0
+#####################################################################
+#
+#
+#
+# Constants describing software dependency versions
+MONGO_VERSION='2.2.1'
+NODE_VERSION='0.8.14'
+CUBE_VERSION='0.2.4'
+
+
+
+# Understand from where we are being run
+ORIG_DIR=`pwd`
+DIR=`dirname $0`
+cd $DIR
+DIR_PATH=`pwd`
+
+# Ensure we've been called with the correct arguments
+if [ $# -ne 1 ]
+then
+  echo "Usage: `basename $0` /install/path"
+  exit 1
+fi
+
+# Build directory structure
+echo "Creating DASH directory structure and basic setup..."
+mkdir -p "${1}/bin"
+mkdir -p "${1}/dist"
+mkdir -p "${1}/data"
+mkdir -p "${1}/logs"
+
+# Copy bin scripts and make them executable
+cp -R $DIR_PATH/etc/bin/* $1/bin
+chmod +x $1/bin/*
+
+# Copy software dependencies to the dist directory
+cp -R $DIR_PATH/dist/mongodb-linux-x86_64-${MONGO_VERSION}.tgz ${1}/dist/.
+cp -R $DIR_PATH/dist/node-v${NODE_VERSION}.tar.gz ${1}/dist/.
+cp -R $DIR_PATH/dist/cube-v${CUBE_VERSION}.zip ${1}/dist/.
+
+# Finished with this phase of the build.
+echo "Done."
+echo "Building and installing software dependencies. Install directory is:";
+echo "> ${1}/dist"
+
+# Install MongoDB
+# -------------------------------------------------------------------
+pushd "${1}/dist"
+tar xzvf "${1}/dist/mongodb-linux-x86_64-${MONGO_VERSION}.tgz"
+ln -s    "${1}/dist/mongodb-linux-x86_64-${MONGO_VERSION}" "${1}/dist/mongodb"
+mkdir -p "${1}/data/mongo/db"
+popd
+
+# Pre-start MongoDB to preallocate the journal files
+$1/dist/mongodb/bin/mongod \
+  --port 27018 --dbpath=$1/data/mongo/db &
+
+# Stop MongoDB once it is ready
+kill -2 `pidof mongod`
+
+# Install Node
+# -------------------------------------------------------------------
+pushd    "${1}/dist"
+tar xzvf "${1}/dist/node-v${NODE_VERSION}.tar.gz"
+pushd    "${1}/dist/node-v${NODE_VERSION}"
+./configure --prefix "${1}/dist/node"
+make
+make install
+popd
+popd
+
+# Install Cube
+# -------------------------------------------------------------------
+pushd "${1}/dist"
+unzip "${1}/dist/cube-v${CUBE_VERSION}.zip"
+ln -s "${1}/dist/cube-${CUBE_VERSION}" "${1}/dist/cube"
+cp "${DIR_PATH}/etc/cube/collector-config.js" "${1}/dist/cube/bin/."
+cp "${DIR_PATH}/etc/cube/evaluator-config.js" "${1}/dist/cube/bin/."
+mkdir "${1}/logs/cube"
+pushd "${1}/dist/cube"
+$1/dist/node/bin/npm install
+popd
+popd
+
+
+# And we're done...
+echo "Done. run '${1}/bin/start_dash' to start Dash"
+exit
+
+
+
+
+
+
+
+
